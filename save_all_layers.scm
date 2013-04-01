@@ -3,17 +3,19 @@
 ; the Free Software Foundation; either version 2 of the License, or
 ; (at your option) any later version.
 ;
+; (remixed by kf 2013 Added an interactive Path Dialog.. save by layer visibility upcomming )
+;
 ; This program is distributed in the hope that it will be useful,
 ; but WITHOUT ANY WARRANTY; without even the implied warranty of
-; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 ; GNU General Public License for more details.
 
-;; Command is installed in "File->Save all layers..."
+;; Command is installed in "Layer->Save all layers..."
 ;;
 ;; A template string should be provided which fits the form: prefix~~~~.ext
 ;; where prefix is a character string (optionally null).
-;;       ~~~~ represents the digits of the frame number, one ~ per digit
-;;       ext is the filename extension (which also specifies the format)
+;; ~~~~ represents the digits of the frame number, one ~ per digit
+;; ext is the filename extension (which also specifies the format)
 ;; the tildas are optional and four digits will be assumed if omitted.
 ;; an extension of .png is assumed if one is not provided
 ;; the period is significant, if PNG is not to be assumed
@@ -28,12 +30,12 @@
 ;; Note: this is done on a layer-by-layer basis, so more colors may result
 ;; than if the entire image were converted to INDEXED before saving.
 
-;;; Prepend Folder mod by JL
-;;; @see http://chiselapp.com/user/saulgoode/repository/script-fu/artifact/252cedfc2d5c5f39955f6525c24d63fa5528d0af
 
-(define (sg-save-all-layers orig-image drawable
-                                    template
-                                    rename?)
+(define (kf-save-all-layers orig-image
+                            savedirectory
+                            drawable
+                            template
+                            rename?)
   (define (save-layer orig-image layer name)
     (let ((buffer (car (gimp-edit-named-copy layer "temp-copy"))))
       (let ((image (car (gimp-edit-named-paste-as-new buffer))))
@@ -50,10 +52,10 @@
                                       FALSE
                                       FALSE
                                       "" ))
-        (gimp-file-save RUN-NONINTERACTIVE 
-                        image 
-                        (car (gimp-image-get-active-layer image)) 
-                        name 
+        (gimp-file-save RUN-NONINTERACTIVE
+                        image
+                        (car (gimp-image-get-active-layer image))
+                        name
                         name )
         (gimp-image-delete image) )))
   (let* ((layers nil)
@@ -91,20 +93,20 @@
     (set! layers (reverse (vector->list (cadr (gimp-image-get-layers orig-image)))))
     (while (pair? layers)
       (if (= rename? TRUE)
+        
         (begin
           (set! framenum (number->string layerpos))
           (set! framenum (string-append
                 (substring format 0 (- (string-length format)
                                        (string-length framenum))) framenum))
           (set! fullname (string-append basename framenum "." extension)) )
+
         (begin
-          (set! fullname (string-append template (car (strbreakup
-                           (car (gimp-drawable-get-name (car layers))) "("))))
-          ;;(gimp-drawable-set-name (car layers) fullname)
-          ;;(set! fullname (car (gimp-drawable-get-name (car layers)))) 
-  	  )
-      )
-      (save-layer orig-image (car layers) fullname)
+          (set! fullname (car (strbreakup (car (gimp-drawable-get-name (car layers))) "(")))
+          (gimp-drawable-set-name (car layers) fullname)
+          (set! fullname (car (gimp-drawable-get-name (car layers)))) ))
+          
+      (save-layer orig-image (car layers) (string-append savedirectory "/" fullname ) )
       (set! layers (cdr layers))
       (set! layerpos (+ layerpos 1))
       )
@@ -114,18 +116,18 @@
     )
   )
 
-(script-fu-register "sg-save-all-layers"
+(script-fu-register "kf-save-all-layers"
  "Save all layers..."
  "Save each layer to a file."
- "Saul Goode"
- "Saul Goode"
- "11/16/2008"
+ "Saul Goode (remix by kf)"
+ "Saul Goode (remix by kf)"
+ "11/16/2008 (remixed by kf 2013)"
  "*"
- SF-IMAGE    "Image"    0
+ SF-IMAGE "Image" 0
+ SF-DIRNAME "Output directory" "/tmp/"
  SF-DRAWABLE "Drawable" 0
- SF-STRING "Name Template (~ replaced by layer position) or Prepend Folder" "c:\\tmp\\layer\\"
- SF-TOGGLE "Rename (e.g frame~~~~.png) or Prepend Folder" FALSE
+ SF-STRING "Name Template (~ replaced by layer position)" "frame_~~~~.png"
+ SF-TOGGLE "Rename (ex: 'frame__0001')" TRUE
  )
 
-(script-fu-menu-register "sg-save-all-layers"
-                         "<Image>/File/")
+(script-fu-menu-register "kf-save-all-layers" "<Image>/Layer/")
